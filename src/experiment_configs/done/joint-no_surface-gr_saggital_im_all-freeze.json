@@ -1,0 +1,223 @@
+{
+    "path": "/home/daniel/Documents/Uni/MT/experiment_logs/joint/no-surface/gr_sagittal_im_all/freeze",
+    "name": "SA-DenseNet-PatchTransformer",
+    "module_config": {
+        "type": "PoiPredictionModule",
+        "params": {
+            "coarse_config": {
+                "type": "SADenseNet",
+                "params": {
+                    "in_channels": 1,
+                    "n_landmarks": 13,
+                    "loss_fn": "WingLoss",
+                    "feature_l": 256,
+                    "init_features": 64,
+                    "growth_rate": 32,
+                    "block_config": [
+                        6,
+                        12,
+                        12
+                    ],
+                    "bn_size": 4,
+                    "dropout_prob": 0.0,
+                    "lr": 0.0001,
+                    "project_gt": false
+                }
+            },
+            "refinement_config": {
+                "type": "PatchTransformer",
+                "params": {
+                    "n_landmarks": 13,
+                    "n_verts": 5,
+                    "patch_size": 16,
+                    "poi_feature_l": 256,
+                    "patch_feature_l": 64,
+                    "coord_embedding_l": 64,
+                    "poi_embedding_l": 64,
+                    "vert_embedding_l": 128,
+                    "loss_fn": "WingLoss",
+                    "warmup_epochs": -1,
+                    "mlp_dim": 512,
+                    "num_layers": 2,
+                    "num_heads": 4,
+                    "dropout": 0.0,
+                    "lr": 1e-05,
+                    "project_gt": false
+                }
+            },
+            "lr": 0.001,
+            "loss_weights": [
+                1,
+                1
+            ],
+            "optimizer": "AdamW",
+            "scheduler_config": {
+                "type": "LinearLR",
+                "params": {
+                    "start_factor": 1,
+                    "end_factor": 0.1,
+                    "total_iters": 20
+                }
+            },
+            "feature_freeze_patience": 10
+        }
+    },
+    "callbacks_config": [
+        {
+            "type": "ModelCheckpoint",
+            "params": {
+                "monitor": "fine_mean_distance_masked_val",
+                "filename": "sad-pt-{epoch:02d}-{fine_mean_distance_val:.2f}",
+                "save_top_k": 3,
+                "mode": "min"
+            }
+        },
+        {
+            "type": "EarlyStopping",
+            "params": {
+                "monitor": "fine_mean_distance_val",
+                "patience": 20,
+                "mode": "min"
+            }
+        }
+    ],
+    "trainer_config": {
+        "accelerator": "gpu",
+        "max_epochs": 200,
+        "log_every_n_steps": 10,
+        "accumulate_grad_batches": 2
+    },
+    "data_module_config": {
+        "type": "JointDataModule",
+        "params": {
+            "master_df": "/home/daniel/Data/master_df_cleaned_combined.csv",
+            "train_subjects": [
+                2, 5, 6, 7, 8, 9,"WS-17",
+                "WS-18",
+                "WS-53",
+                "WS-09",
+                "WS-25",
+                "WS-08",
+                "WS-22",
+                "WS-63",
+                "WS-52",
+                "WS-54",
+                "WS-36",
+                "WS-47",
+                "WS-34",
+                "WS-23",
+                "WS-13",
+                "WS-38",
+                "WS-43",
+                "WS-07",
+                "WS-56",
+                "WS-31",
+                "WS-05",
+                "WS-30",
+                "WS-50",
+                "WS-19",
+                "WS-40",
+                "WS-29",
+                "WS-00"
+            ],
+            "val_subjects": [
+                10, "WS-16",
+                "WS-62",
+                "WS-45",
+                "WS-26"
+            ],
+            "test_subjects": [
+                3, "WS-06",
+                "WS-55",
+                "WS-15",
+                "WS-46",
+                "WS-48"
+            ],
+            "input_shape": [
+                128,
+                128,
+                96
+            ],
+            "flip_prob": 0.5,
+            "transform_config": {
+                "type": "LandmarksRandAffine",
+                "params": {
+                    "prob": 0.8,
+                    "rotate_range": [
+                        [
+                            -0.3490658503988659,
+                            0.3490658503988659
+                        ],
+                        [
+                            -0.3490658503988659,
+                            0.3490658503988659
+                        ],
+                        [
+                            -0.3490658503988659,
+                            0.3490658503988659
+                        ]
+                    ],
+                    "shear_range": [
+                        [
+                            -0.1,
+                            0.1
+                        ],
+                        [
+                            -0.1,
+                            0.1
+                        ],
+                        [
+                            -0.1,
+                            0.1
+                        ]
+                    ],
+                    "translate_range": [
+                        [
+                            -5,
+                            5
+                        ],
+                        [
+                            -5,
+                            5
+                        ],
+                        [
+                            -5,
+                            5
+                        ]
+                    ],
+                    "scale_range": [
+                        [
+                            -0.2,
+                            0.1
+                        ],
+                        [
+                            -0.2,
+                            0.1
+                        ],
+                        [
+                            -0.2,
+                            0.1
+                        ]
+                    ],
+                    "device": "cpu"
+                }
+            },
+            "batch_size": 6,
+            "num_workers": 3,
+            "include_poi_list": [
+                90, 91, 94, 95, 81,
+                101,
+                103,
+                102,
+                104,
+                125,
+                127,
+                134,
+                136
+            ],
+            "include_vert_list": [
+                18, 19, 20, 21, 22
+            ]
+        }
+    }
+}
