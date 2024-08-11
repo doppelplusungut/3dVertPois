@@ -110,10 +110,10 @@ def get_vertseg(container) -> NII:
 
 def get_files(
     container,
-    get_poi: callable,
-    get_ct_fn: callable,
-    get_subreg_fn: callable,
-    get_vertseg_fn: callable,
+    get_poi: Callable,
+    get_ct_fn: Callable,
+    get_subreg_fn: Callable,
+    get_vertseg_fn: Callable,
 ) -> tuple[POI, NII, NII, NII]:
     return (
         get_poi(container),

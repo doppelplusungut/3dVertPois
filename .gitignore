@@ -110,3 +110,6 @@ bids/*
 
 # isort
 .isort.cfg
+
+# mypy
+.mypy_cache/
