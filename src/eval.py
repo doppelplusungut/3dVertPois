@@ -27,6 +27,12 @@ def load_data_module_from_config(config_path, joint=False, alternative_poi_endin
         return POIDataModule(**config)
 
 
+def load_model_from_checkpoint(checkpoint_path):
+    # Load the model from the checkpoint
+    model = PoiPredictionModule.load_from_checkpoint(checkpoint_path)
+    return model
+
+
 def np_to_ctd(
     t,
     vertebra,
