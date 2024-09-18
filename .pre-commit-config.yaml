@@ -1,0 +1,24 @@
+repos:
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]  # Use the black profile for compatibility
+
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 24.8.0
+    hooks:
+      - id: black
+        args: ["--line-length", "88"]  # Line length of 88 is standard for black, we set it explicitly for clarity
+
+  - repo: https://github.com/PyCQA/docformatter
+    rev: v1.7.5
+    hooks:
+      - id: docformatter
+        args: ["--in-place", "--wrap-summaries", "88", "--wrap-descriptions", "88"]  # Summaries and descriptions should be wrapped at 88 characters where possible
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1 
+    hooks:
+      - id: flake8
+        args: ["--ignore", "E203,E501,E701,E704,W503"]  # Ignore line length and other warnings because black will handle them

@@ -1,15 +1,16 @@
-"""
-Adapted from MONAI's UNETR implementation.
-"""
+"""Adapted from MONAI's UNETR implementation."""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 
 import torch.nn as nn
-
 from monai.networks.blocks.dynunet_block import UnetOutBlock
-from monai.networks.blocks.unetr_block import UnetrBasicBlock, UnetrPrUpBlock, UnetrUpBlock
+from monai.networks.blocks.unetr_block import (
+    UnetrBasicBlock,
+    UnetrPrUpBlock,
+    UnetrUpBlock,
+)
 from monai.networks.nets.vit import ViT
 from monai.utils import deprecated_arg, ensure_tuple_rep
 
@@ -21,7 +22,11 @@ class UNETR(nn.Module):
     """
 
     @deprecated_arg(
-        name="pos_embed", since="1.2", removed="1.4", new_name="proj_type", msg_suffix="please use `proj_type` instead."
+        name="pos_embed",
+        since="1.2",
+        removed="1.4",
+        new_name="proj_type",
+        msg_suffix="please use `proj_type` instead.",
     )
     def __init__(
         self,
@@ -87,7 +92,9 @@ class UNETR(nn.Module):
         self.num_layers = 12
         img_size = ensure_tuple_rep(img_size, spatial_dims)
         self.patch_size = ensure_tuple_rep(16, spatial_dims)
-        self.feat_size = tuple(img_d // p_d for img_d, p_d in zip(img_size, self.patch_size))
+        self.feat_size = tuple(
+            img_d // p_d for img_d, p_d in zip(img_size, self.patch_size)
+        )
         self.hidden_size = hidden_size
         self.classification = False
         self.vit = ViT(
@@ -186,8 +193,14 @@ class UNETR(nn.Module):
             norm_name=norm_name,
             res_block=res_block,
         )
-        self.out = UnetOutBlock(spatial_dims=spatial_dims, in_channels=feature_size, out_channels=out_channels)
-        self.proj_axes = (0, spatial_dims + 1) + tuple(d + 1 for d in range(spatial_dims))
+        self.out = UnetOutBlock(
+            spatial_dims=spatial_dims,
+            in_channels=feature_size,
+            out_channels=out_channels,
+        )
+        self.proj_axes = (0, spatial_dims + 1) + tuple(
+            d + 1 for d in range(spatial_dims)
+        )
         self.proj_view_shape = list(self.feat_size) + [self.hidden_size]
 
     def proj_feat(self, x):

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 def coords_to_heatmaps(coords, target_shape, lambda_decay=1):
     # Get the coords shape so we can handle batched and unbatched inputs
     unbatched = coords.dim() == 2
@@ -9,22 +10,24 @@ def coords_to_heatmaps(coords, target_shape, lambda_decay=1):
 
     # Ensure sigma is a float for precision
     lambda_decay = float(lambda_decay)
-    
+
     # Create a meshgrid for the target_shape: [K, L, M]
-    grid_z, grid_y, grid_x = torch.meshgrid(torch.arange(target_shape[0], device=coords.device, dtype=torch.float),
-                                            torch.arange(target_shape[1], device=coords.device, dtype=torch.float),
-                                            torch.arange(target_shape[2], device=coords.device, dtype=torch.float),
-                                            indexing='ij')
-    
+    grid_z, grid_y, grid_x = torch.meshgrid(
+        torch.arange(target_shape[0], device=coords.device, dtype=torch.float),
+        torch.arange(target_shape[1], device=coords.device, dtype=torch.float),
+        torch.arange(target_shape[2], device=coords.device, dtype=torch.float),
+        indexing="ij",
+    )
+
     # Reshape grid for broadcasting: [1, K, L, M, 3] to match [B, N, 3]
     grid = torch.stack((grid_z, grid_y, grid_x), dim=-1).unsqueeze(0)
-    
+
     # Expand coords_batch for broadcasting: [B, N, 3] -> [B, N, 1, 1, 1, 3] for matching grid's shape
     coords = coords.unsqueeze(-2).unsqueeze(-2).unsqueeze(-2)
-    
+
     # Calculate squared distances: [B, N, K, L, M]
     dist_sq = ((grid - coords) ** 2).sum(dim=-1)
-    
+
     # Compute the Gaussian heatmap: [B, N, K, L, M]
     heatmaps = torch.exp(-torch.sqrt(dist_sq) / lambda_decay)
 
@@ -34,12 +37,13 @@ def coords_to_heatmaps(coords, target_shape, lambda_decay=1):
     # Squeeze out the batch dimension if unbatched
     if unbatched:
         heatmaps = heatmaps.squeeze(0)
-    
+
     return heatmaps
 
+
 def heatmaps_to_coords(pred_heatmaps):
-    """
-    Compute 3D coordinates from a batch of heatmaps, by taking the weighted average of the heatmap coordinates.
+    """Compute 3D coordinates from a batch of heatmaps, by taking the weighted average
+    of the heatmap coordinates.
 
     Args:
         pred_heatmaps (torch.Tensor): Batch of heatmaps of shape (batch_size, n_pois, height, width, depth).
@@ -55,44 +59,50 @@ def heatmaps_to_coords(pred_heatmaps):
 
     # Extract dimensions
     batch_size, n_pois, _, _, _ = pred_heatmaps.shape
-    
+
     # Reshape pred_heatmaps and heatmap_coords for element-wise multiplication
-    pred_heatmaps_reshaped = pred_heatmaps.view(batch_size, n_pois, -1)  # Shape: (batch_size, n_pois, H*W*D)
+    pred_heatmaps_reshaped = pred_heatmaps.view(
+        batch_size, n_pois, -1
+    )  # Shape: (batch_size, n_pois, H*W*D)
     heatmap_coords = create_coordinate_tensor(pred_heatmaps.shape[2:]).to(device)
     heatmap_coords_reshaped = heatmap_coords.view(3, -1)  # Shape: (3, H*W*D)
 
     heatmap_coords_reshaped = heatmap_coords_reshaped.to(device)
-    
+
     # Element-wise multiplication and sum along the last dimension
-    weighted_coords = torch.sum(pred_heatmaps_reshaped.unsqueeze(-1) * heatmap_coords_reshaped.t(), dim=2)  # Shape: (batch_size, n_pois, 3)
-    
+    weighted_coords = torch.sum(
+        pred_heatmaps_reshaped.unsqueeze(-1) * heatmap_coords_reshaped.t(), dim=2
+    )  # Shape: (batch_size, n_pois, 3)
+
     # Reshape the result to (batch_size, n_pois, 3)
     coords = weighted_coords.view(batch_size, n_pois, 3)
 
     if unbatched:
         coords = coords.squeeze(0)
-    
+
     return coords.to(device)
+
 
 def create_coordinate_tensor(shape):
     # Generate a grid of coordinates along each dimension
     indices = [torch.arange(s, dtype=torch.float32) for s in shape]
-    grid = torch.meshgrid(indices, indexing='ij')
+    grid = torch.meshgrid(indices, indexing="ij")
 
     # Stack the coordinate grids along a new dimension to get the final coordinate tensor
     coords = torch.stack(grid, dim=0).float()
-    
+
     return coords
+
 
 class SoftArgmax3D(nn.Module):
     def __init__(self):
         super(SoftArgmax3D, self).__init__()
 
     def forward(self, heatmap):
-        """
-        Apply the soft-argmax operation on a 3D heatmap. The heatmap is expected to be a valid probability distribution, 
-        i.e. the sum of all elements along the spatial dimensions should be 1.
-        
+        """Apply the soft-argmax operation on a 3D heatmap. The heatmap is expected to
+        be a valid probability distribution, i.e. the sum of all elements along the
+        spatial dimensions should be 1.
+
         Args:
             heatmap (torch.Tensor): Input tensor of shape (b, n, h, w, d)
 
@@ -107,9 +117,15 @@ class SoftArgmax3D(nn.Module):
         lin_d = torch.linspace(0, depth - 1, steps=depth, device=heatmap.device)
 
         # Expand grids to match batch size and number of maps
-        grid_h = lin_h.view(1, 1, height, 1, 1).expand(batch_size, num_maps, -1, width, depth)
-        grid_w = lin_w.view(1, 1, 1, width, 1).expand(batch_size, num_maps, height, -1, depth)
-        grid_d = lin_d.view(1, 1, 1, 1, depth).expand(batch_size, num_maps, height, width, -1)
+        grid_h = lin_h.view(1, 1, height, 1, 1).expand(
+            batch_size, num_maps, -1, width, depth
+        )
+        grid_w = lin_w.view(1, 1, 1, width, 1).expand(
+            batch_size, num_maps, height, -1, depth
+        )
+        grid_d = lin_d.view(1, 1, 1, 1, depth).expand(
+            batch_size, num_maps, height, width, -1
+        )
 
         # Compute the soft-argmax coordinates
         soft_argmax_h = torch.sum(heatmap * grid_h, dim=[2, 3, 4])
@@ -118,5 +134,5 @@ class SoftArgmax3D(nn.Module):
 
         # Stack results to get coordinates
         coords = torch.stack([soft_argmax_h, soft_argmax_w, soft_argmax_d], dim=-1)
-        
+
         return coords

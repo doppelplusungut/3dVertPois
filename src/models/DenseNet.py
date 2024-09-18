@@ -10,9 +10,9 @@ from collections.abc import Callable, Sequence
 
 import torch
 import torch.nn as nn
-
 from monai.networks.layers.factories import Conv, Dropout, Pool
 from monai.networks.layers.utils import get_act_layer, get_norm_layer
+
 
 class _DenseLayer(nn.Module):
     def __init__(
@@ -44,13 +44,24 @@ class _DenseLayer(nn.Module):
 
         self.layers = nn.Sequential()
 
-        self.layers.add_module("norm1", get_norm_layer(name=norm, spatial_dims=spatial_dims, channels=in_channels))
+        self.layers.add_module(
+            "norm1",
+            get_norm_layer(name=norm, spatial_dims=spatial_dims, channels=in_channels),
+        )
         self.layers.add_module("relu1", get_act_layer(name=act))
-        self.layers.add_module("conv1", conv_type(in_channels, out_channels, kernel_size=1, bias=False))
+        self.layers.add_module(
+            "conv1", conv_type(in_channels, out_channels, kernel_size=1, bias=False)
+        )
 
-        self.layers.add_module("norm2", get_norm_layer(name=norm, spatial_dims=spatial_dims, channels=out_channels))
+        self.layers.add_module(
+            "norm2",
+            get_norm_layer(name=norm, spatial_dims=spatial_dims, channels=out_channels),
+        )
         self.layers.add_module("relu2", get_act_layer(name=act))
-        self.layers.add_module("conv2", conv_type(out_channels, growth_rate, kernel_size=3, padding=1, bias=False))
+        self.layers.add_module(
+            "conv2",
+            conv_type(out_channels, growth_rate, kernel_size=3, padding=1, bias=False),
+        )
 
         if dropout_prob > 0:
             self.layers.add_module("dropout", dropout_type(dropout_prob))
@@ -86,7 +97,15 @@ class _DenseBlock(nn.Sequential):
         """
         super().__init__()
         for i in range(layers):
-            layer = _DenseLayer(spatial_dims, in_channels, growth_rate, bn_size, dropout_prob, act=act, norm=norm)
+            layer = _DenseLayer(
+                spatial_dims,
+                in_channels,
+                growth_rate,
+                bn_size,
+                dropout_prob,
+                act=act,
+                norm=norm,
+            )
             in_channels += growth_rate
             self.add_module("denselayer%d" % (i + 1), layer)
 
@@ -113,11 +132,15 @@ class _Transition(nn.Sequential):
         conv_type: Callable = Conv[Conv.CONV, spatial_dims]
         pool_type: Callable = Pool[Pool.AVG, spatial_dims]
 
-        self.add_module("norm", get_norm_layer(name=norm, spatial_dims=spatial_dims, channels=in_channels))
+        self.add_module(
+            "norm",
+            get_norm_layer(name=norm, spatial_dims=spatial_dims, channels=in_channels),
+        )
         self.add_module("relu", get_act_layer(name=act))
-        self.add_module("conv", conv_type(in_channels, out_channels, kernel_size=1, bias=False))
+        self.add_module(
+            "conv", conv_type(in_channels, out_channels, kernel_size=1, bias=False)
+        )
         self.add_module("pool", pool_type(kernel_size=2, stride=2))
-
 
 
 class HeatmapDenseNet(nn.Module):
@@ -161,17 +184,33 @@ class HeatmapDenseNet(nn.Module):
         self.n_landmarks = n_landmarks
         self.feature_l = feature_l
 
-        conv_type: type[nn.Conv1d | nn.Conv2d | nn.Conv3d] = Conv[Conv.CONV, spatial_dims]
-        pool_type: type[nn.MaxPool1d | nn.MaxPool2d | nn.MaxPool3d] = Pool[Pool.MAX, spatial_dims]
-        avg_pool_type: type[nn.AdaptiveAvgPool1d | nn.AdaptiveAvgPool2d | nn.AdaptiveAvgPool3d] = Pool[
-            Pool.ADAPTIVEAVG, spatial_dims
+        conv_type: type[nn.Conv1d | nn.Conv2d | nn.Conv3d] = Conv[
+            Conv.CONV, spatial_dims
+        ]
+        pool_type: type[nn.MaxPool1d | nn.MaxPool2d | nn.MaxPool3d] = Pool[
+            Pool.MAX, spatial_dims
         ]
 
         self.features = nn.Sequential(
             OrderedDict(
                 [
-                    ("conv0", conv_type(in_channels, init_features, kernel_size=7, stride=2, padding=3, bias=False)),
-                    ("norm0", get_norm_layer(name=norm, spatial_dims=spatial_dims, channels=init_features)),
+                    (
+                        "conv0",
+                        conv_type(
+                            in_channels,
+                            init_features,
+                            kernel_size=7,
+                            stride=2,
+                            padding=3,
+                            bias=False,
+                        ),
+                    ),
+                    (
+                        "norm0",
+                        get_norm_layer(
+                            name=norm, spatial_dims=spatial_dims, channels=init_features
+                        ),
+                    ),
                     ("relu0", get_act_layer(name=act)),
                     ("pool0", pool_type(kernel_size=3, stride=2, padding=1)),
                 ]
@@ -194,18 +233,28 @@ class HeatmapDenseNet(nn.Module):
             in_channels += num_layers * growth_rate
             if i == len(block_config) - 1:
                 self.features.add_module(
-                    "norm5", get_norm_layer(name=norm, spatial_dims=spatial_dims, channels=in_channels)
+                    "norm5",
+                    get_norm_layer(
+                        name=norm, spatial_dims=spatial_dims, channels=in_channels
+                    ),
                 )
             else:
                 _out_channels = in_channels // 2
                 trans = _Transition(
-                    spatial_dims, in_channels=in_channels, out_channels=_out_channels, act=act, norm=norm
+                    spatial_dims,
+                    in_channels=in_channels,
+                    out_channels=_out_channels,
+                    act=act,
+                    norm=norm,
                 )
                 self.features.add_module(f"transition{i + 1}", trans)
                 in_channels = _out_channels
 
-        #Final convolution to produce n_landmarks heatmaps + feature_l feature maps simultaneously
-        self.features.add_module("conv_final", conv_type(in_channels, n_landmarks + feature_l, kernel_size=1, bias=False))
+        # Final convolution to produce n_landmarks heatmaps + feature_l feature maps simultaneously
+        self.features.add_module(
+            "conv_final",
+            conv_type(in_channels, n_landmarks + feature_l, kernel_size=1, bias=False),
+        )
 
         for m in self.modules():
             if isinstance(m, conv_type):
@@ -216,21 +265,21 @@ class HeatmapDenseNet(nn.Module):
             elif isinstance(m, nn.Linear):
                 nn.init.constant_(torch.as_tensor(m.bias), 0)
 
-
-
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = x.float() # Ensure input is float
-        x = self.features(x) # (batch_size, n_landmarks + feature_l, *spatial_shape // (len(block_config)**2))
-        #Split the output into landmark heatmaps and feature maps
+        x = x.float()  # Ensure input is float
+        x = self.features(
+            x
+        )  # (batch_size, n_landmarks + feature_l, *spatial_shape // (len(block_config)**2))
+        # Split the output into landmark heatmaps and feature maps
         heatmaps, feature_map = x.split([self.n_landmarks, self.feature_l], dim=1)
 
-        #Normalize the heatmaps so that they sum to 1 by applying spatial softmax
+        # Normalize the heatmaps so that they sum to 1 by applying spatial softmax
         B, N, *spatial_shape = heatmaps.shape
         normalized_heatmaps = heatmaps.view(B, N, -1)
         normalized_heatmaps = torch.softmax(normalized_heatmaps, dim=-1)
         normalized_heatmaps = normalized_heatmaps.view(B, N, *spatial_shape)
 
-        #Apply the heatmaps to the feature maps to get the feature encoding for each landmark
+        # Apply the heatmaps to the feature maps to get the feature encoding for each landmark
         # Expand feature map dimensions from (B, F, H, W, D) to (B, 1, F, H, W, D) for broadcasting
         feature_map_expanded = feature_map.unsqueeze(1)
 
@@ -238,6 +287,8 @@ class HeatmapDenseNet(nn.Module):
         # heatmaps_normalized is (B, N, H, W, D)
         # feature_map_expanded is (B, 1, F, H, W, D)
         # We want the output to be (B, N, F), summing over the spatial dimensions (H, W, D)
-        weighted_features = (normalized_heatmaps.unsqueeze(2).detach() * feature_map_expanded).sum(dim=(3, 4, 5))
-        
+        weighted_features = (
+            normalized_heatmaps.unsqueeze(2).detach() * feature_map_expanded
+        ).sum(dim=(3, 4, 5))
+
         return normalized_heatmaps, weighted_features

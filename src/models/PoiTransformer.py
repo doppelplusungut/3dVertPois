@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from monai.networks.blocks.transformerblock import TransformerBlock
 
+
 class PoiTransformer(nn.Module):
     def __init__(
         self,
@@ -20,7 +21,9 @@ class PoiTransformer(nn.Module):
     ) -> None:
         super().__init__()
 
-        hidden_size = poi_feature_l + coord_embedding_l + poi_embedding_l + vert_embedding_l
+        hidden_size = (
+            poi_feature_l + coord_embedding_l + poi_embedding_l + vert_embedding_l
+        )
 
         self.dropout = nn.Dropout(dropout_rate)
 
@@ -42,8 +45,8 @@ class PoiTransformer(nn.Module):
         self.coord_embedding_l = coord_embedding_l
         self.poi_embedding_l = poi_embedding_l
         self.vert_embedding_l = vert_embedding_l
-        
-        self.coordinate_embedding = nn.Linear(3, coord_embedding_l, bias = False)
+
+        self.coordinate_embedding = nn.Linear(3, coord_embedding_l, bias=False)
 
         self.poi_embedding = nn.Embedding(n_landmarks, poi_embedding_l)
         self.vert_embedding = nn.Embedding(n_verts, vert_embedding_l)
@@ -52,33 +55,35 @@ class PoiTransformer(nn.Module):
 
         self.fine_pred = nn.Linear(hidden_size, 3)
 
-    def forward(self, 
-                coarse_preds,
-                poi_indices,
-                vertebra,
-                poi_features):
+    def forward(self, coarse_preds, poi_indices, vertebra, poi_features):
         """
         coarse_preds: (B, N_landmarks, 3)
         poi_indices: (B, N_landmarks)
         vertebra: (B)
         poi_features: (B, N_landmarks, poi_feature_l)
         """
-        #Create the embeddings
-        coords_embedded = self.coordinate_embedding(coarse_preds.float()) #size (B, N_landmarks, coord_embedding_l)
-        pois_embedded = self.poi_embedding(poi_indices) #size (B, N_landmarks, poi_embedding_l)
-        vert_embedded = self.vert_embedding(vertebra) #size (B, 1, vert_embedding_l)
+        # Create the embeddings
+        coords_embedded = self.coordinate_embedding(
+            coarse_preds.float()
+        )  # size (B, N_landmarks, coord_embedding_l)
+        pois_embedded = self.poi_embedding(
+            poi_indices
+        )  # size (B, N_landmarks, poi_embedding_l)
+        vert_embedded = self.vert_embedding(vertebra)  # size (B, 1, vert_embedding_l)
 
-        #Bring vert_embedded to the same shape as the other embeddings
+        # Bring vert_embedded to the same shape as the other embeddings
         vert_embedded = vert_embedded.expand(-1, self.n_landmarks, -1)
 
-        #Concatenate the embeddings
-        x = torch.cat([poi_features, coords_embedded, pois_embedded, vert_embedded], dim = -1) #size (B, N_landmarks, hidden_size)
-        
+        # Concatenate the embeddings
+        x = torch.cat(
+            [poi_features, coords_embedded, pois_embedded, vert_embedded], dim=-1
+        )  # size (B, N_landmarks, hidden_size)
+
         x = self.dropout(x)
 
         for block in self.transformer_blocks:
-            x = block(x) #size (B, N, hidden_size)
+            x = block(x)  # size (B, N, hidden_size)
         x = self.norm(x)
-        x = self.fine_pred(x) #size (B, N, 3)
+        x = self.fine_pred(x)  # size (B, N, 3)
 
         return x
