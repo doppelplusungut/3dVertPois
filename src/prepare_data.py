@@ -252,7 +252,7 @@ def prepare_data(
         process_container,
         save_path=save_path,
         rescale_zoom=rescale_zoom,
-        get_files=get_files_fn,
+        get_files_fn=get_files_fn,
     )
     master = pqdm(
         bids_surgery_info.enumerate_subjects(),
@@ -315,18 +315,18 @@ if __name__ == "__main__":
         get_data_files = partial(
             get_files,
             get_poi=get_gruber_poi,
-            get_ct=get_ct,
-            get_subreg=get_subreg,
-            get_vertseg=get_vertseg,
+            get_ct_fn=get_ct,
+            get_subreg_fn=get_subreg,
+            get_vertseg_fn=get_vertseg,
         )
 
     elif args.dataset_type == "Implants":
         get_data_files = partial(
             get_files,
             get_poi=get_implants_poi,
-            get_ct=get_ct,
-            get_subreg=get_subreg,
-            get_vertseg=get_vertseg,
+            get_ct_fn=get_ct,
+            get_subreg_fn=get_subreg,
+            get_vertseg_fn=get_vertseg,
         )
 
     prepare_data(
