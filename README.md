@@ -1,13 +1,16 @@
 # Automated Point-of-Interest Prediction on CT Scans of Human Vertebrae Using Spine Segmentations
 
-Welcome to the code repository of my master thesis at TUM.
+Welcome to the code repository of my master thesis at TUM. This project addresses the challenge of predicting ligament attachment points on vertebrae in CT Scans of the spine. Accurate identification of these points is crucial for understanding spinal anatomy and facilitating patient-specific simulations that may uncover risk factors of low back pain.
+
+For a quick overview of the project, view the [poster](doc/PresentationPosterMA.pdf). For an in-depth exploration, refer to my [thesis](doc/Daniel_Regenbrecht_Master_Thesis_final_signed.pdf).
+
+## Project Description
+
 The project comprises of three major components:
 
 - Data analysis and preparation
 - Training a POI prediction model
 - An inference pipeline for a given sample/dataset
-
-## Project Description
 
 ## Installation (Ubuntu)
 
